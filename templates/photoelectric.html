@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Photoelectric Effect Simulation</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f1f5f9;color:#1e293b;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 16px}
+  h1{font-size:1.6rem;font-weight:700;margin-bottom:4px;color:#0f172a}
+  .subtitle{font-size:.85rem;color:#64748b;margin-bottom:20px}
+  .app{display:flex;flex-wrap:wrap;gap:20px;max-width:1100px;width:100%;justify-content:center}
+  .canvas-wrap{background:#fff;border-radius:16px;box-shadow:0 1px 3px rgba(0,0,0,.08),0 4px 14px rgba(0,0,0,.06);overflow:hidden;flex:1 1 620px;min-width:320px}
+  canvas{display:block;width:100%;height:auto}
+  .panel{background:#fff;border-radius:16px;box-shadow:0 1px 3px rgba(0,0,0,.08),0 4px 14px rgba(0,0,0,.06);padding:24px;flex:0 0 340px;min-width:280px;display:flex;flex-direction:column;gap:22px}
+  .control-group{display:flex;flex-direction:column;gap:6px}
+  .control-group label{font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#64748b}
+  .slider-row{display:flex;align-items:center;gap:12px}
+  .slider-row input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:6px;border-radius:3px;outline:none;cursor:pointer}
+  .slider-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:#3b82f6;border:2px solid #fff;box-shadow:0 1px 4px rgba(59,130,246,.4);cursor:pointer;transition:transform .15s}
+  .slider-row input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.15)}
+  .slider-row input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#3b82f6;border:2px solid #fff;box-shadow:0 1px 4px rgba(59,130,246,.4);cursor:pointer}
+  #freqSlider{background:linear-gradient(90deg,#dc2626,#f97316,#eab308,#22c55e,#3b82f6,#6366f1,#7c3aed)}
+  #intensitySlider{background:linear-gradient(90deg,#cbd5e1,#3b82f6)}
+  .val-badge{min-width:80px;text-align:center;font-size:.82rem;font-weight:600;background:#f1f5f9;border-radius:8px;padding:4px 8px;color:#334155;white-space:nowrap}
+  .data-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .data-card{background:#f8fafc;border-radius:10px;padding:12px;text-align:center;border:1px solid #e2e8f0}
+  .data-card .label{font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#94a3b8;margin-bottom:4px}
+  .data-card .value{font-size:1.05rem;font-weight:700;color:#1e293b}
+  .data-card .unit{font-size:.7rem;color:#64748b;font-weight:500}
+  .data-card.highlight{border-color:#3b82f6;background:#eff6ff}
+  .data-card.highlight .value{color:#2563eb}
+  .status-bar{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;font-size:.82rem;font-weight:600;transition:all .3s}
+  .status-bar.active{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
+  .status-bar.inactive{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
+  .status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .status-bar.active .status-dot{background:#22c55e;box-shadow:0 0 6px #22c55e}
+  .status-bar.inactive .status-dot{background:#ef4444}
+  .material-select{display:flex;gap:6px;flex-wrap:wrap}
+  .material-btn{padding:6px 14px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;font-size:.78rem;font-weight:600;cursor:pointer;color:#475569;transition:all .15s}
+  .material-btn:hover{border-color:#93c5fd}
+  .material-btn.active{background:#eff6ff;border-color:#3b82f6;color:#2563eb}
+  .legend{font-size:.75rem;color:#94a3b8;line-height:1.7;border-top:1px solid #e2e8f0;padding-top:14px}
+  .legend span{font-weight:600;color:#64748b}
+  .counter-row{display:flex;justify-content:space-between;align-items:center;padding:8px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px}
+  .counter-row .clabel{font-size:.75rem;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em}
+  .counter-row .cval{font-size:1.1rem;font-weight:700;color:#1e293b}
+  .reset-btn{padding:6px 16px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;font-size:.78rem;font-weight:600;cursor:pointer;color:#475569;transition:all .15s}
+  .reset-btn:hover{border-color:#f87171;color:#ef4444;background:#fef2f2}
+</style>
+</head>
+<body>
+<h1>Photoelectric Effect Simulation</h1>
+<p class="subtitle">Adjust frequency and intensity to observe photon-electron interactions</p>
+<div class="app">
+  <div class="canvas-wrap">
+    <canvas id="sim" width="700" height="480"></canvas>
+  </div>
+  <div class="panel">
+    <div class="control-group">
+      <label>Metal Surface</label>
+      <div class="material-select" id="materialBtns">
+        <button class="material-btn active" data-mat="sodium">Sodium</button>
+        <button class="material-btn" data-mat="zinc">Zinc</button>
+        <button class="material-btn" data-mat="copper">Copper</button>
+        <button class="material-btn" data-mat="platinum">Platinum</button>
+      </div>
+    </div>
+    <div class="control-group">
+      <label>Photon Frequency</label>
+      <div class="slider-row">
+        <input type="range" id="freqSlider" min="3" max="30" step="0.1" value="8">
+        <span class="val-badge" id="freqVal">8.0 &times; 10&sup1;&sup4; Hz</span>
+      </div>
+    </div>
+    <div class="control-group">
+      <label>Light Intensity</label>
+      <div class="slider-row">
+        <input type="range" id="intensitySlider" min="1" max="20" step="1" value="6">
+        <span class="val-badge" id="intensityVal">6 photons/s</span>
+      </div>
+    </div>
+    <div id="statusBar" class="status-bar inactive">
+      <div class="status-dot"></div>
+      <span id="statusText">Below threshold &mdash; no electrons ejected</span>
+    </div>
+    <div class="data-grid">
+      <div class="data-card">
+        <div class="label">Photon Energy</div>
+        <div class="value" id="photonE">3.31</div>
+        <div class="unit">eV</div>
+      </div>
+      <div class="data-card">
+        <div class="label">Work Function (&phi;)</div>
+        <div class="value" id="workFunc">2.28</div>
+        <div class="unit">eV</div>
+      </div>
+      <div class="data-card highlight" id="keCard">
+        <div class="label">Electron KE<sub>max</sub></div>
+        <div class="value" id="electronKE">0.00</div>
+        <div class="unit">eV</div>
+      </div>
+      <div class="data-card">
+        <div class="label">Threshold Freq (f&sub0;)</div>
+        <div class="value" id="threshFreq">5.51</div>
+        <div class="unit">&times; 10&sup1;&sup4; Hz</div>
+      </div>
+    </div>
+    <div class="counter-row">
+      <span class="clabel">Electrons Emitted</span>
+      <span class="cval" id="eCount">0</span>
+      <button class="reset-btn" id="resetBtn">Reset</button>
+    </div>
+    <div class="legend">
+      <span>Yellow/colored dots</span> = photons &nbsp;|&nbsp; <span>Blue dots</span> = ejected electrons<br>
+      E = hf &nbsp;|&nbsp; KE<sub>max</sub> = hf &minus; &phi; &nbsp;|&nbsp; f&#8320; = &phi; / h<br>
+      Higher intensity = more photons, but doesn't change KE.<br>
+      Higher frequency = more energy per photon = faster electrons.
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  "use strict";
+
+  /* ── DOM refs ── */
+  var canvas = document.getElementById("sim");
+  var ctx = canvas.getContext("2d");
+  var W = canvas.width, H = canvas.height;
+
+  var freqSlider     = document.getElementById("freqSlider");
+  var intensitySlider= document.getElementById("intensitySlider");
+  var freqValEl      = document.getElementById("freqVal");
+  var intensityValEl = document.getElementById("intensityVal");
+  var photonEEl      = document.getElementById("photonE");
+  var workFuncEl     = document.getElementById("workFunc");
+  var electronKEEl   = document.getElementById("electronKE");
+  var threshFreqEl   = document.getElementById("threshFreq");
+  var statusBar      = document.getElementById("statusBar");
+  var statusText     = document.getElementById("statusText");
+  var eCountEl       = document.getElementById("eCount");
+  var resetBtn       = document.getElementById("resetBtn");
+  var materialBtns   = document.querySelectorAll(".material-btn");
+
+  /* ── Constants ── */
+  var h_eV = 4.1357e-15;   /* Planck's constant in eV·s */
+
+  var MATERIALS = {
+    sodium:   { phi: 2.28, color: "#b0bec5", name: "Sodium" },
+    zinc:     { phi: 3.63, color: "#90a4ae", name: "Zinc" },
+    copper:   { phi: 4.70, color: "#d4a574", name: "Copper" },
+    platinum: { phi: 5.65, color: "#a0a0a0", name: "Platinum" }
+  };
+
+  /* ── State ── */
+  var currentMat  = "sodium";
+  var photons     = [];
+  var electrons   = [];
+  var sparks      = [];
+  var eCount      = 0;
+  var lastSpawn   = 0;
+  var absorptions = [];  /* flash circles on metal surface */
+
+  /* ── Layout ── */
+  var METAL_X = 430;
+  var METAL_W = 250;
+  var METAL_Y = 50;
+  var METAL_H = 370;
+  var LIGHT_SRC_X = 50;
+  var LIGHT_SRC_Y = H / 2;
+
+  /* ── Helpers ── */
+  function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+
+  function getPhiNow() { return MATERIALS[currentMat].phi; }
+  function getThresholdFreq() { return getPhiNow() / h_eV; }
+
+  function freqToHue(f) {
+    /* map 3–30 (×10¹⁴ Hz) onto visible-ish hue. low freq = red, high = violet/UV glow */
+    if (f <= 4.3)  return 0;        /* infrared → red */
+    if (f <= 5.1)  return 30;       /* red-orange */
+    if (f <= 5.7)  return 55;       /* orange-yellow */
+    if (f <= 6.1)  return 60;       /* yellow */
+    if (f <= 6.5)  return 100;      /* yellow-green */
+    if (f <= 6.9)  return 130;      /* green */
+    if (f <= 7.5)  return 195;      /* cyan */
+    if (f <= 8.0)  return 220;      /* blue */
+    if (f <= 10)   return 260;      /* indigo */
+    if (f <= 15)   return 280;      /* violet */
+    return 290;                     /* UV */
+  }
+
+  function freqToColor(f, alpha) {
+    var a = alpha !== undefined ? alpha : 1;
+    var hue = freqToHue(f);
+    var sat = f > 10 ? 70 : 90;
+    var light = f > 10 ? 70 : 55;
+    return "hsla(" + hue + "," + sat + "%," + light + "%," + a + ")";
+  }
+
+  function freqToWavelength(f) {
+    return 3e8 / (f * 1e14) * 1e9;
+  }
+
+  /* ── Material buttons ── */
+  materialBtns.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      materialBtns.forEach(function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      currentMat = btn.getAttribute("data-mat");
+      eCount = 0;
+      updateUI();
+    });
+  });
+
+  resetBtn.addEventListener("click", function () {
+    eCount = 0;
+    photons = [];
+    electrons = [];
+    sparks = [];
+    absorptions = [];
+    updateUI();
+  });
+
+  /* ── Spawn helpers ── */
+  function spawnPhoton(freq, intensity) {
+    var targetY = METAL_Y + 35 + Math.random() * (METAL_H - 70);
+    var startX = LIGHT_SRC_X + 40 + Math.random() * 20;
+    var dx = METAL_X - startX;
+    var dy = targetY - LIGHT_SRC_Y;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    var speed = 2.8 + Math.random() * 1.2;
+    var vx = (dx / dist) * speed;
+    var vy = (dy / dist) * speed;
+
+    photons.push({
+      x: startX,
+      y: LIGHT_SRC_Y + (Math.random() - 0.5) * 30,
+      vx: vx,
+      vy: vy,
+      freq: freq,
+      color: freqToColor(freq),
+      wavePhase: Math.random() * Math.PI * 2,
+      waveAmp: 3 + (freq - 3) / 27 * 4,
+      size: 3.2,
+      alpha: 0.85 + Math.random() * 0.15
+    });
+  }
+
+  function spawnElectron(x, y, ke) {
+    var speed = 1.8 + ke * 1.0;
+    var angle = (Math.random() - 0.5) * 1.2;
+    electrons.push({
+      x: x,
+      y: y,
+      vx: speed * Math.cos(angle),
+      vy: -speed * Math.sin(angle) + (Math.random() - 0.5) * 1.8,
+      alpha: 1,
+      size: 3.5,
+      trail: []
+    });
+    eCount++;
+    /* sparks */
+    for (var i = 0; i < 8; i++) {
+      sparks.push({
+        x: x,
+        y: y,
+        vx: 1.5 + Math.random() * 3,
+        vy: (Math.random() - 0.5) * 5,
+        life: 1,
+        decay: 0.025 + Math.random() * 0.025,
+        color: Math.random() > 0.5 ? "#38bdf8" : "#7dd3fc"
+      });
+    }
+    /* absorption flash */
+    absorptions.push({ x: METAL_X + 2, y: y, r: 4, maxR: 22, alpha: 0.7 });
+  }
+
+  /* ── Drawing ── */
+  function drawBackground() {
+    ctx.fillStyle = "#0f172a";
+    ctx.fillRect(0, 0, W, H);
+    /* subtle grid */
+    ctx.strokeStyle = "rgba(255,255,255,0.025)";
+    ctx.lineWidth = 1;
+    for (var x = 0; x < W; x += 40) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+    for (var y = 0; y < H; y += 40) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+  }
+
+  function drawMetal() {
+    var mat = MATERIALS[currentMat];
+    /* main body */
+    ctx.save();
+    var grad = ctx.createLinearGradient(METAL_X, 0, METAL_X + METAL_W, 0);
+    grad.addColorStop(0, mat.color);
+    grad.addColorStop(0.4, lightenColor(mat.color, 20));
+    grad.addColorStop(1, darkenColor(mat.color, 30));
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(METAL_X, METAL_Y);
+    ctx.lineTo(METAL_X + METAL_W, METAL_Y);
+    ctx.arcTo(METAL_X + METAL_W + 12, METAL_Y, METAL_X + METAL_W + 12, METAL_Y + 12, 12);
+    ctx.lineTo(METAL_X + METAL_W + 12, METAL_Y + METAL_H - 12);
+    ctx.arcTo(METAL_X + METAL_W + 12, METAL_Y + METAL_H, METAL_X + METAL_W, METAL_Y + METAL_H, 12);
+    ctx.lineTo(METAL_X, METAL_Y + METAL_H);
+    ctx.closePath();
+    ctx.fill();
+
+    /* surface highlight */
+    var surfGrad = ctx.createLinearGradient(METAL_X, 0, METAL_X + 8, 0);
+    surfGrad.addColorStop(0, "rgba(255,255,255,0.15)");
+    surfGrad.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = surfGrad;
+    ctx.fillRect(METAL_X, METAL_Y, 8, METAL_H);
+
+    /* crystal lattice dots */
+    ctx.fillStyle = "rgba(255,255,255,0.06)";
+    for (var row = 0; row < 14; row++) {
+      for (var col = 0; col < 9; col++) {
+        var cx = METAL_X + 25 + col * 27;
+        var cy = METAL_Y + 55 + row * 24;
+        if (cy < METAL_Y + METAL_H - 10) {
+          ctx.beginPath();
+          ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
+    /* label */
+    ctx.fillStyle = "#fff";
+    ctx.globalAlpha = 0.7;
+    ctx.font = "bold 12px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText(mat.name + " Plate", METAL_X + METAL_W / 2 + 6, METAL_Y + 22);
+    ctx.font = "10px system-ui";
+    ctx.globalAlpha = 0.45;
+    ctx.fillText("\u03C6 = " + mat.phi.toFixed(2) + " eV", METAL_X + METAL_W / 2 + 6, METAL_Y + 38);
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  function lightenColor(hex, pct) {
+    var r = parseInt(hex.slice(1, 3), 16);
+    var g = parseInt(hex.slice(3, 5), 16);
+    var b = parseInt(hex.slice(5, 7), 16);
+    r = Math.min(255, r + pct);
+    g = Math.min(255, g + pct);
+    b = Math.min(255, b + pct);
+    return "rgb(" + r + "," + g + "," + b + ")";
+  }
+  function darkenColor(hex, pct) {
+    var r = parseInt(hex.slice(1, 3), 16);
+    var g = parseInt(hex.slice(3, 5), 16);
+    var b = parseInt(hex.slice(5, 7), 16);
+    r = Math.max(0, r - pct);
+    g = Math.max(0, g - pct);
+    b = Math.max(0, b - pct);
+    return "rgb(" + r + "," + g + "," + b + ")";
+  }
+
+  function drawLightSource(freq) {
+    var color = freqToColor(freq);
+    ctx.save();
+
+    /* glow */
+    var glow = ctx.createRadialGradient(LIGHT_SRC_X + 20, LIGHT_SRC_Y, 4, LIGHT_SRC_X + 20, LIGHT_SRC_Y, 65);
+    glow.addColorStop(0, freqToColor(freq, 0.35));
+    glow.addColorStop(1, "transparent");
+    ctx.fillStyle = glow;
+    ctx.fillRect(LIGHT_SRC_X - 50, LIGHT_SRC_Y - 70, 140, 140);
+
+    /* housing */
+    ctx.fillStyle = "#334155";
+    ctx.beginPath();
+    ctx.moveTo(LIGHT_SRC_X - 5, LIGHT_SRC_Y - 40);
+    ctx.lineTo(LIGHT_SRC_X + 28, LIGHT_SRC_Y - 28);
+    ctx.lineTo(LIGHT_SRC_X + 28, LIGHT_SRC_Y + 28);
+    ctx.lineTo(LIGHT_SRC_X - 5, LIGHT_SRC_Y + 40);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#475569";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    /* emitter face */
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 14;
+    ctx.fillRect(LIGHT_SRC_X + 28, LIGHT_SRC_Y - 22, 8, 44);
+    ctx.shadowBlur = 0;
+
+    /* labels */
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "bold 9px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText("LIGHT", LIGHT_SRC_X + 12, LIGHT_SRC_Y + 55);
+    ctx.fillText("SOURCE", LIGHT_SRC_X + 12, LIGHT_SRC_Y + 66);
+
+    /* wavelength label */
+    ctx.fillStyle = freqToColor(freq, 0.7);
+    ctx.font = "10px system-ui";
+    var wl = freqToWavelength(freq);
+    var label = wl > 0 && wl < 10000 ? "\u03BB \u2248 " + Math.round(wl) + " nm" : "UV";
+    if (freq > 10) label = "UV (\u03BB < 300 nm)";
+    ctx.fillText(label, LIGHT_SRC_X + 12, LIGHT_SRC_Y - 50);
+
+    ctx.restore();
+  }
+
+  function drawBeamCone(freq) {
+    ctx.save();
+    ctx.globalAlpha = 0.04 + parseFloat(intensitySlider.value) / 20 * 0.06;
+    ctx.fillStyle = freqToColor(freq);
+    ctx.beginPath();
+    ctx.moveTo(LIGHT_SRC_X + 36, LIGHT_SRC_Y - 18);
+    ctx.lineTo(METAL_X, METAL_Y + 20);
+    ctx.lineTo(METAL_X, METAL_Y + METAL_H - 20);
+    ctx.lineTo(LIGHT_SRC_X + 36, LIGHT_SRC_Y + 18);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawPhotons() {
+    for (var i = 0; i < photons.length; i++) {
+      var p = photons[i];
+      ctx.save();
+      ctx.globalAlpha = p.alpha;
+      /* glow */
+      var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 4);
+      g.addColorStop(0, freqToColor(p.freq, 0.5));
+      g.addColorStop(1, "transparent");
+      ctx.fillStyle = g;
+      ctx.fillRect(p.x - p.size * 4, p.y - p.size * 4, p.size * 8, p.size * 8);
+      /* dot */
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+      /* wave lines */
+      ctx.strokeStyle = freqToColor(p.freq, 0.25);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (var t = -12; t <= 0; t += 1) {
+        var wx = p.x + t * (p.vx / Math.abs(p.vx || 1)) * 1.2;
+        var wy = p.y + Math.sin(t * 0.8 + p.wavePhase) * p.waveAmp;
+        if (t === -12) ctx.moveTo(wx, wy);
+        else ctx.lineTo(wx, wy);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  function drawElectrons() {
+    for (var i = 0; i < electrons.length; i++) {
+      var e = electrons[i];
+      ctx.save();
+      /* trail */
+      for (var j = 0; j < e.trail.length; j++) {
+        var t = e.trail[j];
+        ctx.globalAlpha = (j / e.trail.length) * 0.25 * e.alpha;
+        ctx.fillStyle = "#38bdf8";
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, e.size * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      /* glow */
+      ctx.globalAlpha = e.alpha * 0.5;
+      var eg = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, e.size * 4);
+      eg.addColorStop(0, "rgba(56,189,248,0.6)");
+      eg.addColorStop(1, "transparent");
+      ctx.fillStyle = eg;
+      ctx.fillRect(e.x - e.size * 4, e.y - e.size * 4, e.size * 8, e.size * 8);
+      /* body */
+      ctx.globalAlpha = e.alpha;
+      ctx.fillStyle = "#38bdf8";
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, e.size, 0, Math.PI * 2);
+      ctx.fill();
+      /* label */
+      ctx.fillStyle = "#0c4a6e";
+      ctx.font = "bold 6px system-ui";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("e\u207B", e.x, e.y + 0.5);
+      ctx.restore();
+    }
+  }
+
+  function drawSparks() {
+    for (var i = 0; i < sparks.length; i++) {
+      var s = sparks[i];
+      ctx.save();
+      ctx.globalAlpha = s.life * 0.9;
+      ctx.fillStyle = s.color || "#fbbf24";
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function drawAbsorptions() {
+    for (var i = 0; i < absorptions.length; i++) {
+      var a = absorptions[i];
+      ctx.save();
+      ctx.globalAlpha = a.alpha;
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  function drawEnergyBar(freq) {
+    var phi = getPhiNow();
+    var energy = h_eV * freq * 1e14;
+    var barX = 10, barY = H - 60, barW = 140, barH = 14;
+    var maxE = 14;
+
+    ctx.save();
+    ctx.globalAlpha = 0.8;
+    /* background */
+    ctx.fillStyle = "#1e293b";
+    ctx.fillRect(barX, barY - 20, barW + 10, 50);
+
+    ctx.fillStyle = "#64748b";
+    ctx.font = "9px system-ui";
+    ctx.textAlign = "left";
+    ctx.fillText("ENERGY COMPARISON", barX + 2, barY - 8);
+
+    /* phi bar */
+    var phiW = clamp(phi / maxE, 0, 1) * barW;
+    ctx.fillStyle = "#f87171";
+    ctx.fillRect(barX, barY, phiW, barH);
+    /* energy bar */
+    var eW = clamp(energy / maxE, 0, 1) * barW;
+    ctx.fillStyle = energy >= phi ? "#34d399" : "#fbbf24";
+    ctx.fillRect(barX, barY, eW, barH * 0.5);
+
+    /* outline */
+    ctx.strokeStyle = "#475569";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(barX, barY, barW, barH);
+
+    /* labels */
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "8px system-ui";
+    ctx.fillText("\u03C6=" + phi.toFixed(1), barX + phiW + 3, barY + 12);
+    ctx.fillStyle = energy >= phi ? "#34d399" : "#fbbf24";
+    ctx.fillText("E=" + energy.toFixed(1), barX + eW + 3, barY + 6);
+
+    ctx.restore();
+  }
+
+  function drawLabels(freq) {
+    var aboveThreshold = freq * 1e14 >= getThresholdFreq();
+    ctx.save();
+    ctx.font = "11px system-ui";
+    ctx.textAlign = "right";
+    ctx.fillStyle = aboveThreshold ? "#4ade80" : "#f87171";
+    ctx.fillText(aboveThreshold ? "\u25CF Electrons emitting" : "\u25CF Below threshold", W - 12, 22);
+    ctx.restore();
+  }
+
+  /* ── Physics Update ── */
+  function update() {
+    var freq = parseFloat(freqSlider.value);
+    var intensity = parseFloat(intensitySlider.value);
+    var now = performance.now();
+    var interval = 1000 / (intensity * 0.6);
+    var phi = getPhiNow();
+    var aboveThreshold = h_eV * freq * 1e14 >= phi;
+
+    /* spawn photons */
+    if (now - lastSpawn > interval) {
+      spawnPhoton(freq, intensity);
+      lastSpawn = now;
+    }
+
+    /* move photons */
+    for (var i = photons.length - 1; i >= 0; i--) {
+      var p = photons[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.wavePhase += 0.15;
+
+      /* hit metal surface */
+      if (p.x >= METAL_X - 2 && p.y >= METAL_Y && p.y <= METAL_Y + METAL_H) {
+        if (aboveThreshold) {
+          var ke = h_eV * freq * 1e14 - phi;
+          spawnElectron(METAL_X + 10, p.y, ke);
+        } else {
+          /* reflection sparks */
+          for (var j = 0; j < 4; j++) {
+            sparks.push({
+              x: METAL_X,
+              y: p.y,
+              vx: -1.5 - Math.random() * 2.5,
+              vy: (Math.random() - 0.5) * 4,
+              life: 1,
+              decay: 0.04 + Math.random() * 0.03,
+              color: p.color
+            });
+          }
+          absorptions.push({ x: METAL_X + 2, y: p.y, r: 3, maxR: 15, alpha: 0.5 });
+        }
+        photons.splice(i, 1);
+        continue;
+      }
+
+      /* off screen */
+      if (p.x > W + 20 || p.y < -20 || p.y > H + 20) {
+        photons.splice(i, 1);
+      }
+    }
+
+    /* move electrons */
+    for (var i = electrons.length - 1; i >= 0; i--) {
+      var e = electrons[i];
+      e.trail.push({ x: e.x, y: e.y });
+      if (e.trail.length > 14) e.trail.shift();
+      e.x += e.vx;
+      e.y += e.vy;
+      e.vy += 0.015;
+      e.alpha -= 0.0025;
+      if (e.alpha <= 0 || e.x > W + 30 || e.y < -30 || e.y > H + 30) {
+        electrons.splice(i, 1);
+      }
+    }
+
+    /* move sparks */
+    for (var i = sparks.length - 1; i >= 0; i--) {
+      var s = sparks[i];
+      s.x += s.vx;
+      s.y += s.vy;
+      s.life -= s.decay;
+      if (s.life <= 0) sparks.splice(i, 1);
+    }
+
+    /* absorption rings expand and fade */
+    for (var i = absorptions.length - 1; i >= 0; i--) {
+      var a = absorptions[i];
+      a.r += 0.6;
+      a.alpha -= 0.025;
+      if (a.alpha <= 0 || a.r > a.maxR) absorptions.splice(i, 1);
+    }
+  }
+
+  /* ── Update UI panel ── */
+  function updateUI() {
+    var freq = parseFloat(freqSlider.value);
+    var intensity = parseFloat(intensitySlider.value);
+    var phi = getPhiNow();
+    var energy = h_eV * freq * 1e14;
+    var aboveThreshold = energy >= phi;
+    var ke = aboveThreshold ? energy - phi : 0;
+    var threshF = phi / h_eV;
+
+    freqValEl.textContent = freq.toFixed(1) + " \u00D7 10\u00B9\u2074 Hz";
+    intensityValEl.textContent = intensity + " photons/s";
+    photonEEl.textContent = energy.toFixed(2);
+    workFuncEl.textContent = phi.toFixed(2);
+    electronKEEl.textContent = ke.toFixed(2);
+    threshFreqEl.textContent = (threshF / 1e14).toFixed(2);
+    eCountEl.textContent = eCount;
+
+    var keCard = document.getElementById("keCard");
+    if (aboveThreshold) {
+      statusBar.className = "status-bar active";
+      statusText.textContent = "Above threshold \u2014 electrons being ejected!";
+      keCard.classList.add("highlight");
+    } else {
+      statusBar.className = "status-bar inactive";
+      statusText.textContent = "Below threshold \u2014 no electrons ejected";
+      keCard.classList.remove("highlight");
+    }
+  }
+
+  freqSlider.addEventListener("input", updateUI);
+  intensitySlider.addEventListener("input", updateUI);
+  updateUI();
+
+  /* ── Main loop ── */
+  function loop() {
+    update();
+    drawBackground();
+    drawBeamCone(parseFloat(freqSlider.value));
+    drawMetal();
+    drawLightSource(parseFloat(freqSlider.value));
+    drawAbsorptions();
+    drawPhotons();
+    drawElectrons();
+    drawSparks();
+    drawEnergyBar(parseFloat(freqSlider.value));
+    drawLabels(parseFloat(freqSlider.value));
+    updateUI();
+    requestAnimationFrame(loop);
+  }
+
+  loop();
+})();
+</script>
+</body>
